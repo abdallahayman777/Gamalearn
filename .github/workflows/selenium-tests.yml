@@ -1,0 +1,147 @@
+name: SwiftAssess Signup Automation Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - tests/**
+      - requirements.txt
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  selenium-tests:
+    name: Run Selenium Test Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      PYTHON_VERSION: '3.11'
+      CI: 'true'
+
+    steps:
+      # Checkout code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Setup Python
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      # Install Chrome
+      - name: Install Google Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+          google-chrome --version
+
+      # Install ChromeDriver
+      - name: Install ChromeDriver
+        run: |
+          CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d'.' -f1)
+          CHROMEDRIVER_VERSION=$(curl -sS https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION)
+          wget -N https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip
+          unzip chromedriver_linux64.zip
+          sudo mv chromedriver /usr/local/bin/chromedriver
+          sudo chmod +x /usr/local/bin/chromedriver
+          chromedriver --version
+
+      # Install dependencies
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Smoke Tests
+      - name: Run Smoke Tests
+        continue-on-error: true
+        run: |
+          pytest tests/test_signup.py -m smoke \
+            --junitxml=test-results/smoke-results.xml \
+            --html=test-results/smoke-report.html \
+            --self-contained-html \
+            --alluredir=allure-results \
+            -v
+
+      # Regression Tests
+      - name: Run Regression Tests
+        continue-on-error: true
+        run: |
+          pytest tests/test_signup.py -m regression \
+            --junitxml=test-results/regression-results.xml \
+            --html=test-results/regression-report.html \
+            --self-contained-html \
+            --alluredir=allure-results \
+            -v
+
+      # Mobile Tests
+      - name: Run Mobile Tests
+        continue-on-error: true
+        run: |
+          pytest tests/test_signup.py -m mobile \
+            --junitxml=test-results/mobile-results.xml \
+            --html=test-results/mobile-report.html \
+            --self-contained-html \
+            --alluredir=allure-results \
+            -v
+
+      # Full Test Suite
+      - name: Run Full Test Suite
+        continue-on-error: true
+        run: |
+          pytest tests/test_signup.py \
+            --junitxml=test-results/all-results.xml \
+            --html=test-results/full-report.html \
+            --self-contained-html \
+            --alluredir=allure-results \
+            --cov=tests \
+            --cov-report=xml:coverage.xml \
+            --cov-report=html:coverage \
+            -v
+
+      # Generate Allure Report
+      - name: Generate Allure Report
+        if: always()
+        run: |
+          pip install allure-pytest
+          sudo apt-get install -y default-jre
+          wget https://github.com/allure-framework/allure2/releases/download/2.25.0/allure-2.25.0.tgz
+          tar -zxvf allure-2.25.0.tgz
+          sudo mv allure-2.25.0 /opt/allure
+          sudo ln -s /opt/allure/bin/allure /usr/bin/allure
+          allure generate allure-results -o allure-report --clean
+
+      # Upload Test Results
+      - name: Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: test-results
+
+      # Upload Allure Report
+      - name: Upload Allure Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: allure-report
+
+      # Upload Coverage
+      - name: Upload Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
+
+      # Upload Screenshots on Failure
+      - name: Upload Failure Screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-screenshots
+          path: test_screenshots
