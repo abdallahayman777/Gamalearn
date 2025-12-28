@@ -10,7 +10,6 @@ Comprehensive automated test suite for the SwiftAssess signup page using Seleniu
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Running Tests](#running-tests)
-- [Azure DevOps Integration](#azure-devops-integration)
 - [Reports](#reports)
 - [Best Practices](#best-practices)
 
@@ -24,7 +23,6 @@ This automation framework tests the SwiftAssess signup functionality (https://ap
 - ✅ Mobile device responsiveness
 - ✅ Screenshot capture on failures
 - ✅ Retry mechanism for flaky tests
-- ✅ Azure DevOps pipeline integration
 
 ## 🧪 Test Cases
 
@@ -60,30 +58,7 @@ This automation framework tests the SwiftAssess signup functionality (https://ap
 **Tags:** `mobile`  
 **Device:** iPhone X emulation (375x812)
 
-## 📁 Project Structure
 
-```
-swiftassess-automation/
-│
-├── tests/
-│   ├── __init__.py
-│   └── test_signup.py          # Main test suite with POM
-│
-├── conftest.py                  # Pytest configuration and fixtures
-├── pytest.ini                   # Pytest settings
-├── requirements.txt             # Python dependencies
-├── azure-pipelines.yml          # Azure DevOps pipeline
-├── README.md                    # This file
-│
-├── test-results/               # Test execution results
-│   ├── *.xml                   # JUnit XML reports
-│   └── *.html                  # HTML reports
-│
-├── test_screenshots/           # Failure screenshots
-│
-├── allure-results/             # Allure report data
-└── allure-report/              # Generated Allure HTML report
-```
 
 ## 📦 Prerequisites
 
@@ -188,50 +163,6 @@ pytest tests/test_signup.py::TestValidSignup::test_valid_signup_all_fields -v
 ```bash
 pytest tests/test_signup.py --cov=tests --cov-report=html
 ```
-
-### Parallel Execution (Optional)
-
-```bash
-pytest tests/test_signup.py -n 4
-```
-
-## ☁️ Azure DevOps Integration
-
-### Setup in Azure DevOps
-
-1. **Create New Pipeline:**
-   - Go to Pipelines → New Pipeline
-   - Select your repository
-   - Choose "Existing Azure Pipelines YAML file"
-   - Select `azure-pipelines.yml`
-
-2. **Configure Variables (Optional):**
-   - Go to Pipeline → Edit → Variables
-   - Add any required environment variables
-
-3. **Save and Run:**
-   - Click "Save and run"
-   - Pipeline will execute automatically on commits
-
-### Pipeline Features
-
-- ✅ Automated test execution on push/PR
-- ✅ Parallel test stages (smoke, regression, mobile)
-- ✅ Test result publishing
-- ✅ Code coverage reports
-- ✅ HTML and Allure report generation
-- ✅ Screenshot artifacts on failure
-- ✅ Email notifications
-- ✅ Pip package caching for faster builds
-
-### View Results
-
-After pipeline execution:
-
-1. **Test Results Tab:** View pass/fail statistics
-2. **Code Coverage Tab:** View coverage metrics
-3. **Artifacts:** Download HTML reports and screenshots
-4. **Tests Tab:** Detailed test execution data
 
 ## 📊 Reports
 
@@ -357,13 +288,7 @@ Tests include CAPTCHA field interaction but assume a known value for demonstrati
 4. Submit pull request
 5. Pipeline will validate changes
 
-## 📧 Contact
 
-For questions or issues, contact the QA team or create an issue in the repository.
-
-## 📄 License
-
-[Your License Here]
 
 ---
 
