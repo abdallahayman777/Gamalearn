@@ -1,0 +1,26 @@
+# Core Testing Framework
+pytest==7.4.3
+pytest-html==4.1.1
+pytest-rerunfailures==12.0
+
+# Selenium WebDriver
+selenium==4.15.2
+
+# Reporting
+allure-pytest==2.13.2
+pytest-cov==4.1.0
+
+# Utilities
+python-dotenv==1.0.0
+
+# Data handling
+Faker==20.0.3
+
+# Optional: For BDD support
+pytest-bdd==6.1.1
+
+# Optional: Parallel execution
+pytest-xdist==3.5.0
+
+# Optional: Advanced assertions
+pytest-assume==2.4.3

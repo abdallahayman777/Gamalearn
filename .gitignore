@@ -1,0 +1,104 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Test Results and Reports
+test-results/
+test_screenshots/
+allure-results/
+allure-report/
+coverage/
+*.xml
+*.html
+!pytest.ini
+!requirements.txt
+
+# Logs
+*.log
+logs/
+test-output/
+
+# Environment Variables
+.env
+.env.local
+
+# ChromeDriver
+chromedriver
+chromedriver.exe
+geckodriver
+geckodriver.exe
+
+# Azure DevOps
+.azure-pipelines/
+
+# Temporary Files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Screenshots (except samples)
+screenshots/
+*.png
+*.jpg
+*.jpeg
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# Documentation builds
+docs/_build/
+
+# Package Manager
+package-lock.json
+yarn.lock
