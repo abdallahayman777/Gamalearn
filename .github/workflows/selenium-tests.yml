@@ -33,9 +33,21 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y google-chrome-stable
 
-      - name: Run Selenium tests (Headless)
+      - name: Run Selenium tests (generate report)
         continue-on-error: true
         env:
           DISPLAY: :99
         run: |
-          pytest tests --maxfail=1 --disable-warnings -v
+          pytest tests \
+            --maxfail=1 \
+            --disable-warnings \
+            -v \
+            --html=reports/pytest-report.html \
+            --self-contained-html
+
+      - name: Upload Pytest HTML Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selenium-test-report
+          path: reports/pytest-report.html
