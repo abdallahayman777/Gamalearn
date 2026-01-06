@@ -1,0 +1,230 @@
+# Azure DevOps Pipeline for SwiftAssess Signup Automation Tests
+# This pipeline runs automated tests and publishes results
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    include:
+      - tests/*
+      - requirements.txt
+
+pr:
+  branches:
+    include:
+      - main
+      - develop
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  PYTHON_VERSION: '3.11'
+  PIP_CACHE_DIR: $(Pipeline.Workspace)/.pip
+
+stages:
+  - stage: Test
+    displayName: 'Run Automated Tests'
+    jobs:
+      - job: SeleniumTests
+        displayName: 'Execute Selenium Test Suite'
+        timeoutInMinutes: 30
+        
+        steps:
+          # Checkout code
+          - checkout: self
+            displayName: 'Checkout Repository'
+
+          # Setup Python
+          - task: UsePythonVersion@0
+            displayName: 'Setup Python $(PYTHON_VERSION)'
+            inputs:
+              versionSpec: '$(PYTHON_VERSION)'
+              addToPath: true
+
+          # Cache pip packages for faster builds
+          - task: Cache@2
+            displayName: 'Cache pip packages'
+            inputs:
+              key: 'python | "$(Agent.OS)" | requirements.txt'
+              restoreKeys: |
+                python | "$(Agent.OS)"
+                python
+              path: $(PIP_CACHE_DIR)
+
+          # Install Chrome and ChromeDriver
+          - script: |
+              wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+              sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+              sudo apt-get update
+              sudo apt-get install -y google-chrome-stable
+              
+              # Install ChromeDriver
+              CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d'.' -f1)
+              CHROMEDRIVER_VERSION=$(curl -sS https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION)
+              wget -N https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip
+              unzip chromedriver_linux64.zip
+              sudo mv chromedriver /usr/local/bin/chromedriver
+              sudo chmod +x /usr/local/bin/chromedriver
+              
+              # Verify installation
+              google-chrome --version
+              chromedriver --version
+            displayName: 'Install Chrome and ChromeDriver'
+
+          # Install Python dependencies
+          - script: |
+              python -m pip install --upgrade pip
+              pip install -r requirements.txt
+            displayName: 'Install Python Dependencies'
+
+          # Run Smoke Tests
+          - script: |
+              pytest tests/test_signup.py -m smoke \
+                --junitxml=$(System.DefaultWorkingDirectory)/test-results/smoke-results.xml \
+                --html=$(System.DefaultWorkingDirectory)/test-results/smoke-report.html \
+                --self-contained-html \
+                --alluredir=$(System.DefaultWorkingDirectory)/allure-results \
+                -v
+            displayName: 'Run Smoke Tests'
+            env:
+              CI: 'true'
+            continueOnError: true
+
+          # Run Regression Tests
+          - script: |
+              pytest tests/test_signup.py -m regression \
+                --junitxml=$(System.DefaultWorkingDirectory)/test-results/regression-results.xml \
+                --html=$(System.DefaultWorkingDirectory)/test-results/regression-report.html \
+                --self-contained-html \
+                --alluredir=$(System.DefaultWorkingDirectory)/allure-results \
+                -v
+            displayName: 'Run Regression Tests'
+            env:
+              CI: 'true'
+            continueOnError: true
+
+          # Run Mobile Tests
+          - script: |
+              pytest tests/test_signup.py -m mobile \
+                --junitxml=$(System.DefaultWorkingDirectory)/test-results/mobile-results.xml \
+                --html=$(System.DefaultWorkingDirectory)/test-results/mobile-report.html \
+                --self-contained-html \
+                --alluredir=$(System.DefaultWorkingDirectory)/allure-results \
+                -v
+            displayName: 'Run Mobile Device Tests'
+            env:
+              CI: 'true'
+            continueOnError: true
+
+          # Run All Tests (Full Suite)
+          - script: |
+              pytest tests/test_signup.py \
+                --junitxml=$(System.DefaultWorkingDirectory)/test-results/all-results.xml \
+                --html=$(System.DefaultWorkingDirectory)/test-results/full-report.html \
+                --self-contained-html \
+                --alluredir=$(System.DefaultWorkingDirectory)/allure-results \
+                --cov=tests \
+                --cov-report=html:$(System.DefaultWorkingDirectory)/coverage \
+                --cov-report=xml:$(System.DefaultWorkingDirectory)/coverage.xml \
+                -v
+            displayName: 'Run Full Test Suite'
+            env:
+              CI: 'true'
+            continueOnError: true
+
+          # Generate Allure Report
+          - script: |
+              pip install allure-pytest
+              allure generate $(System.DefaultWorkingDirectory)/allure-results \
+                -o $(System.DefaultWorkingDirectory)/allure-report \
+                --clean
+            displayName: 'Generate Allure Report'
+            condition: always()
+
+          # Publish Test Results to Azure DevOps
+          - task: PublishTestResults@2
+            displayName: 'Publish Test Results'
+            condition: always()
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: '**/test-results/*.xml'
+              searchFolder: '$(System.DefaultWorkingDirectory)'
+              mergeTestResults: true
+              failTaskOnFailedTests: false
+              testRunTitle: 'SwiftAssess Signup Tests'
+
+          # Publish Code Coverage
+          - task: PublishCodeCoverageResults@1
+            displayName: 'Publish Code Coverage'
+            condition: always()
+            inputs:
+              codeCoverageTool: 'Cobertura'
+              summaryFileLocation: '$(System.DefaultWorkingDirectory)/coverage.xml'
+              reportDirectory: '$(System.DefaultWorkingDirectory)/coverage'
+
+          # Publish HTML Reports as Artifacts
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish HTML Test Reports'
+            condition: always()
+            inputs:
+              PathtoPublish: '$(System.DefaultWorkingDirectory)/test-results'
+              ArtifactName: 'test-reports'
+              publishLocation: 'Container'
+
+          # Publish Allure Report as Artifact
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Allure Report'
+            condition: always()
+            inputs:
+              PathtoPublish: '$(System.DefaultWorkingDirectory)/allure-report'
+              ArtifactName: 'allure-report'
+              publishLocation: 'Container'
+
+          # Publish Screenshots on Failure
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Failure Screenshots'
+            condition: failed()
+            inputs:
+              PathtoPublish: '$(System.DefaultWorkingDirectory)/test_screenshots'
+              ArtifactName: 'failure-screenshots'
+              publishLocation: 'Container'
+
+          # Send notification on failure (optional)
+          - task: SendEmail@1
+            displayName: 'Send Email Notification on Failure'
+            condition: failed()
+            inputs:
+              To: 'qa-team@example.com'
+              From: 'azure-devops@example.com'
+              Subject: 'SwiftAssess Test Suite Failed - Build $(Build.BuildNumber)'
+              Body: |
+                Test suite execution failed.
+                
+                Build: $(Build.BuildNumber)
+                Branch: $(Build.SourceBranchName)
+                Commit: $(Build.SourceVersion)
+                
+                View results: $(System.TeamFoundationCollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)
+
+  - stage: ReportGeneration
+    displayName: 'Generate and Archive Reports'
+    dependsOn: Test
+    condition: always()
+    jobs:
+      - job: ArchiveReports
+        displayName: 'Archive Test Reports'
+        steps:
+          - task: DownloadBuildArtifacts@0
+            displayName: 'Download Test Artifacts'
+            inputs:
+              buildType: 'current'
+              downloadType: 'specific'
+              downloadPath: '$(System.ArtifactsDirectory)'
+
+          - script: |
+              echo "Test execution completed"
+              echo "Artifacts available for download"
+            displayName: 'Report Summary'
